@@ -48,7 +48,7 @@ const Search = () => {
       );
     }
 
-    if (selectedLocation) {
+    if (selectedLocation && selectedLocation !== "all") {
       filtered = filtered.filter((medicine) =>
         medicine.county === selectedLocation
       );
@@ -141,7 +141,7 @@ const Search = () => {
                     </div>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Locations</SelectItem>
+                    <SelectItem value="all">All Locations</SelectItem>
                     {mockData.counties.map((county) => (
                       <SelectItem key={county} value={county}>
                         {county}
