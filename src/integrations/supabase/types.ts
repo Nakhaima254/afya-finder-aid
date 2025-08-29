@@ -14,16 +14,168 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      medicines: {
+        Row: {
+          availability: boolean
+          created_at: string
+          id: string
+          name: string
+          pharmacy_id: string
+          price: number
+          strength: string
+          updated_at: string
+        }
+        Insert: {
+          availability?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          pharmacy_id: string
+          price: number
+          strength: string
+          updated_at?: string
+        }
+        Update: {
+          availability?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          pharmacy_id?: string
+          price?: number
+          strength?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medicines_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pharmacies: {
+        Row: {
+          contact: string
+          created_at: string
+          id: string
+          license: string
+          location: string
+          name: string
+          updated_at: string
+          user_id: string
+          verified: boolean
+        }
+        Insert: {
+          contact: string
+          created_at?: string
+          id?: string
+          license: string
+          location: string
+          name: string
+          updated_at?: string
+          user_id: string
+          verified?: boolean
+        }
+        Update: {
+          contact?: string
+          created_at?: string
+          id?: string
+          license?: string
+          location?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+          verified?: boolean
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reservations: {
+        Row: {
+          created_at: string
+          id: string
+          medicine_id: string
+          pharmacy_id: string
+          status: Database["public"]["Enums"]["reservation_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          medicine_id: string
+          pharmacy_id: string
+          status?: Database["public"]["Enums"]["reservation_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          medicine_id?: string
+          pharmacy_id?: string
+          status?: Database["public"]["Enums"]["reservation_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservations_medicine_id_fkey"
+            columns: ["medicine_id"]
+            isOneToOne: false
+            referencedRelation: "medicines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservations_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { user_uuid: string }
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
     }
     Enums: {
-      [_ in never]: never
+      reservation_status: "pending" | "confirmed" | "cancelled"
+      user_role: "consumer" | "pharmacy" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +302,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      reservation_status: ["pending", "confirmed", "cancelled"],
+      user_role: ["consumer", "pharmacy", "admin"],
+    },
   },
 } as const
