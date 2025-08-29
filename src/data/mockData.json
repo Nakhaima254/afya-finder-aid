@@ -1,0 +1,140 @@
+{
+  "medicines": [
+    {
+      "id": "1",
+      "name": "Paracetamol",
+      "strength": "500mg",
+      "price": 120,
+      "pharmacyName": "HealthPlus Pharmacy",
+      "location": "Nairobi",
+      "county": "Nairobi",
+      "availability": "In Stock",
+      "pharmacyId": "p1"
+    },
+    {
+      "id": "2",
+      "name": "Amoxicillin",
+      "strength": "250mg",
+      "price": 850,
+      "pharmacyName": "MediCare Central",
+      "location": "Mombasa",
+      "county": "Mombasa",
+      "availability": "Low Stock",
+      "pharmacyId": "p2"
+    },
+    {
+      "id": "3",
+      "name": "Ibuprofen",
+      "strength": "400mg",
+      "price": 180,
+      "pharmacyName": "Wellness Drugs",
+      "location": "Kisumu",
+      "county": "Kisumu",
+      "availability": "In Stock",
+      "pharmacyId": "p3"
+    },
+    {
+      "id": "4",
+      "name": "Metformin",
+      "strength": "500mg",
+      "price": 450,
+      "pharmacyName": "City Pharmacy",
+      "location": "Eldoret",
+      "county": "Uasin Gishu",
+      "availability": "Out of Stock",
+      "pharmacyId": "p4"
+    },
+    {
+      "id": "5",
+      "name": "Paracetamol",
+      "strength": "500mg",
+      "price": 100,
+      "pharmacyName": "MediCare Central",
+      "location": "Mombasa",
+      "county": "Mombasa",
+      "availability": "In Stock",
+      "pharmacyId": "p2"
+    },
+    {
+      "id": "6",
+      "name": "Ciprofloxacin",
+      "strength": "500mg",
+      "price": 1200,
+      "pharmacyName": "HealthPlus Pharmacy",
+      "location": "Nairobi",
+      "county": "Nairobi",
+      "availability": "In Stock",
+      "pharmacyId": "p1"
+    },
+    {
+      "id": "7",
+      "name": "Omeprazole",
+      "strength": "20mg",
+      "price": 320,
+      "pharmacyName": "Wellness Drugs",
+      "location": "Kisumu",
+      "county": "Kisumu",
+      "availability": "Low Stock",
+      "pharmacyId": "p3"
+    },
+    {
+      "id": "8",
+      "name": "Losartan",
+      "strength": "50mg",
+      "price": 680,
+      "pharmacyName": "City Pharmacy",
+      "location": "Eldoret",
+      "county": "Uasin Gishu",
+      "availability": "In Stock",
+      "pharmacyId": "p4"
+    }
+  ],
+  "pharmacies": [
+    {
+      "id": "p1",
+      "name": "HealthPlus Pharmacy",
+      "licenseNumber": "PPB/PH/001/2023",
+      "county": "Nairobi",
+      "location": "Westlands, Nairobi",
+      "status": "Verified",
+      "phone": "+254712345678",
+      "email": "info@healthplus.ke"
+    },
+    {
+      "id": "p2",
+      "name": "MediCare Central",
+      "licenseNumber": "PPB/PH/002/2023",
+      "county": "Mombasa",
+      "location": "CBD, Mombasa",
+      "status": "Verified",
+      "phone": "+254723456789",
+      "email": "contact@medicare.ke"
+    },
+    {
+      "id": "p3",
+      "name": "Wellness Drugs",
+      "licenseNumber": "PPB/PH/003/2023",
+      "county": "Kisumu",
+      "location": "Central Kisumu",
+      "status": "Pending Verification",
+      "phone": "+254734567890",
+      "email": "wellness@drugs.ke"
+    },
+    {
+      "id": "p4",
+      "name": "City Pharmacy",
+      "licenseNumber": "PPB/PH/004/2023",
+      "county": "Uasin Gishu",
+      "location": "Eldoret Town",
+      "status": "Verified",
+      "phone": "+254745678901",
+      "email": "city@pharmacy.ke"
+    }
+  ],
+  "counties": [
+    "Nairobi",
+    "Mombasa", 
+    "Kisumu",
+    "Eldoret"
+  ]
+}

@@ -1,0 +1,285 @@
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Search as SearchIcon, MapPin, Filter, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { motion, AnimatePresence } from "framer-motion";
+import { useToast } from "@/hooks/use-toast";
+import mockData from "@/data/mockData.json";
+
+interface Medicine {
+  id: string;
+  name: string;
+  strength: string;
+  price: number;
+  pharmacyName: string;
+  location: string;
+  county: string;
+  availability: string;
+  pharmacyId: string;
+}
+
+const Search = () => {
+  const [searchParams] = useSearchParams();
+  const { toast } = useToast();
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
+  const [selectedLocation, setSelectedLocation] = useState<string>("");
+  const [medicines, setMedicines] = useState<Medicine[]>([]);
+  const [filteredMedicines, setFilteredMedicines] = useState<Medicine[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    // Load mock data
+    setMedicines(mockData.medicines);
+    setFilteredMedicines(mockData.medicines);
+  }, []);
+
+  useEffect(() => {
+    // Filter medicines based on search query and location
+    let filtered = medicines;
+
+    if (searchQuery.trim()) {
+      filtered = filtered.filter((medicine) =>
+        medicine.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    if (selectedLocation) {
+      filtered = filtered.filter((medicine) =>
+        medicine.county === selectedLocation
+      );
+    }
+
+    setFilteredMedicines(filtered);
+  }, [searchQuery, selectedLocation, medicines]);
+
+  const handleSearch = () => {
+    setIsLoading(true);
+    // Simulate API call
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+  };
+
+  const handleReserve = (medicine: Medicine) => {
+    toast({
+      title: "Reservation Confirmed",
+      description: `${medicine.name} has been reserved at ${medicine.pharmacyName}. Please collect within 24 hours.`,
+    });
+    console.log("Reserve medicine:", medicine);
+  };
+
+  const getAvailabilityBadge = (availability: string) => {
+    switch (availability) {
+      case "In Stock":
+        return (
+          <Badge variant="default" className="bg-success text-success-foreground">
+            <CheckCircle className="mr-1 h-3 w-3" />
+            In Stock
+          </Badge>
+        );
+      case "Low Stock":
+        return (
+          <Badge variant="default" className="bg-warning text-warning-foreground">
+            <Clock className="mr-1 h-3 w-3" />
+            Low Stock
+          </Badge>
+        );
+      case "Out of Stock":
+        return (
+          <Badge variant="destructive">
+            <AlertCircle className="mr-1 h-3 w-3" />
+            Out of Stock
+          </Badge>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-muted/30">
+      <div className="container mx-auto px-4 py-8">
+        {/* Search Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="space-y-6"
+        >
+          <div className="text-center space-y-4">
+            <h1 className="text-3xl font-bold lg:text-4xl">Search Medicines</h1>
+            <p className="text-xl text-muted-foreground">
+              Find the best prices and availability across Kenya
+            </p>
+          </div>
+
+          {/* Search Form */}
+          <Card className="shadow-card">
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="relative">
+                  <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Search medicine name..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                
+                <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+                  <SelectTrigger>
+                    <div className="flex items-center">
+                      <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
+                      <SelectValue placeholder="Select location" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Locations</SelectItem>
+                    {mockData.counties.map((county) => (
+                      <SelectItem key={county} value={county}>
+                        {county}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Button onClick={handleSearch} disabled={isLoading}>
+                  <Filter className="mr-2 h-4 w-4" />
+                  {isLoading ? "Searching..." : "Search"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Results */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="mt-8"
+        >
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="text-2xl font-semibold">
+              Search Results ({filteredMedicines.length})
+            </h2>
+          </div>
+
+          <AnimatePresence>
+            {filteredMedicines.length === 0 ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="text-center py-12"
+              >
+                <div className="space-y-4">
+                  <SearchIcon className="mx-auto h-12 w-12 text-muted-foreground" />
+                  <h3 className="text-xl font-semibold">No medicines found</h3>
+                  <p className="text-muted-foreground">
+                    Try adjusting your search terms or location filter
+                  </p>
+                </div>
+              </motion.div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {filteredMedicines.map((medicine, index) => (
+                  <motion.div
+                    key={medicine.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.4, delay: index * 0.1 }}
+                  >
+                    <Card className="h-full shadow-card hover:shadow-elevated transition-shadow duration-300">
+                      <CardHeader className="space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <CardTitle className="text-lg">{medicine.name}</CardTitle>
+                            <p className="text-sm text-muted-foreground">
+                              {medicine.strength}
+                            </p>
+                          </div>
+                          {getAvailabilityBadge(medicine.availability)}
+                        </div>
+                      </CardHeader>
+                      
+                      <CardContent className="space-y-4">
+                        <div className="text-2xl font-bold text-primary">
+                          KSh {medicine.price.toLocaleString()}
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <div className="flex items-center text-sm">
+                            <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
+                            <span>{medicine.pharmacyName}</span>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {medicine.location}, {medicine.county}
+                          </div>
+                        </div>
+
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              className="w-full"
+                              disabled={medicine.availability === "Out of Stock"}
+                              variant={medicine.availability === "Out of Stock" ? "outline" : "default"}
+                            >
+                              {medicine.availability === "Out of Stock" ? "Out of Stock" : "Reserve Medicine"}
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Reserve Medicine</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <div className="space-y-2">
+                                <h4 className="font-semibold">{medicine.name} {medicine.strength}</h4>
+                                <p className="text-sm text-muted-foreground">
+                                  Price: KSh {medicine.price.toLocaleString()}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  Pharmacy: {medicine.pharmacyName}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  Location: {medicine.location}, {medicine.county}
+                                </p>
+                              </div>
+                              <div className="bg-accent/50 p-4 rounded-lg">
+                                <p className="text-sm">
+                                  <strong>Note:</strong> This is a demo reservation. 
+                                  In the actual implementation, you would need to contact 
+                                  the pharmacy directly or complete the reservation process.
+                                </p>
+                              </div>
+                              <Button
+                                className="w-full"
+                                onClick={() => handleReserve(medicine)}
+                              >
+                                Confirm Reservation
+                              </Button>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </div>
+    </div>
+  );
+};
+
+export default Search;
