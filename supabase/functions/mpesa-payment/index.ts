@@ -11,6 +11,63 @@ interface PaymentRequest {
   description: string;
 }
 
+// M-Pesa API configuration
+const MPESA_ENDPOINT = "https://sandbox.safaricom.co.ke"; // Use https://api.safaricom.co.ke for production
+const BUSINESS_SHORT_CODE = "174379"; // Test shortcode, replace with your actual shortcode
+
+const getAccessToken = async (): Promise<string> => {
+  const consumerKey = Deno.env.get("MPESA_CONSUMER_KEY");
+  const consumerSecret = Deno.env.get("MPESA_CONSUMER_SECRET");
+  
+  if (!consumerKey || !consumerSecret) {
+    throw new Error("M-Pesa credentials not configured");
+  }
+
+  const auth = btoa(`${consumerKey}:${consumerSecret}`);
+  
+  const response = await fetch(`${MPESA_ENDPOINT}/oauth/v1/generate?grant_type=client_credentials`, {
+    method: "GET",
+    headers: {
+      "Authorization": `Basic ${auth}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to get M-Pesa access token");
+  }
+
+  const data = await response.json();
+  return data.access_token;
+};
+
+const generatePassword = (): string => {
+  const timestamp = new Date().toISOString().replace(/[^0-9]/g, "").slice(0, -3);
+  const passkey = Deno.env.get("MPESA_PASSKEY") || "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919";
+  const password = btoa(`${BUSINESS_SHORT_CODE}${passkey}${timestamp}`);
+  return password;
+};
+
+const getTimestamp = (): string => {
+  return new Date().toISOString().replace(/[^0-9]/g, "").slice(0, -3);
+};
+
+const formatPhoneNumber = (phone: string): string => {
+  // Remove any spaces, dashes, or plus signs
+  phone = phone.replace(/[\s\-\+]/g, "");
+  
+  // If it starts with 0, replace with 254
+  if (phone.startsWith("0")) {
+    phone = "254" + phone.substring(1);
+  }
+  
+  // If it doesn't start with 254, add it
+  if (!phone.startsWith("254")) {
+    phone = "254" + phone;
+  }
+  
+  return phone;
+};
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -22,32 +79,67 @@ const handler = async (req: Request): Promise<Response> => {
     
     console.log("M-Pesa payment request:", { amount, phoneNumber, description });
 
-    // For now, we'll simulate M-Pesa integration
-    // In a real implementation, you would integrate with Safaricom's M-Pesa API
-    // This requires proper M-Pesa credentials and API setup
-    
-    // Simulate processing delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // For demonstration, we'll return a success response
-    // In production, this would make actual API calls to M-Pesa
-    const response = {
-      success: true,
-      transactionId: `MP${Date.now()}${Math.floor(Math.random() * 1000)}`,
-      message: `Payment request sent to ${phoneNumber} for KES ${amount}`,
-      merchantPhoneNumber: "0718098165", // Your M-Pesa number
-      instructions: `1. You will receive an M-Pesa prompt on ${phoneNumber}\n2. Enter your M-Pesa PIN\n3. Confirm the payment to 0718098165\n4. You will receive a confirmation SMS`
+    // Format phone number
+    const formattedPhone = formatPhoneNumber(phoneNumber);
+    console.log("Formatted phone number:", formattedPhone);
+
+    // Get access token
+    const accessToken = await getAccessToken();
+    console.log("Access token obtained successfully");
+
+    // Generate password and timestamp
+    const password = generatePassword();
+    const timestamp = getTimestamp();
+
+    // STK Push request
+    const stkPushPayload = {
+      BusinessShortCode: BUSINESS_SHORT_CODE,
+      Password: password,
+      Timestamp: timestamp,
+      TransactionType: "CustomerPayBillOnline",
+      Amount: Math.round(amount), // Ensure integer
+      PartyA: formattedPhone,
+      PartyB: BUSINESS_SHORT_CODE,
+      PhoneNumber: formattedPhone,
+      CallBackURL: "https://your-callback-url.com/callback", // Replace with your actual callback URL
+      AccountReference: "AfyaAlert",
+      TransactionDesc: description || "AfyaAlert Service Payment"
     };
 
-    console.log("M-Pesa payment response:", response);
+    console.log("STK Push payload:", stkPushPayload);
 
-    return new Response(JSON.stringify(response), {
-      status: 200,
+    const stkResponse = await fetch(`${MPESA_ENDPOINT}/mpesa/stkpush/v1/processrequest`, {
+      method: "POST",
       headers: {
+        "Authorization": `Bearer ${accessToken}`,
         "Content-Type": "application/json",
-        ...corsHeaders,
       },
+      body: JSON.stringify(stkPushPayload),
     });
+
+    const stkData = await stkResponse.json();
+    console.log("STK Push response:", stkData);
+
+    if (stkData.ResponseCode === "0") {
+      const response = {
+        success: true,
+        checkoutRequestId: stkData.CheckoutRequestID,
+        merchantRequestId: stkData.MerchantRequestID,
+        message: `STK push sent to ${phoneNumber}. Please check your phone and enter your M-Pesa PIN.`,
+        instructions: `1. You will receive an M-Pesa prompt on ${phoneNumber}\n2. Enter your M-Pesa PIN\n3. Confirm the payment of KES ${amount}\n4. You will receive a confirmation SMS`
+      };
+
+      return new Response(JSON.stringify(response), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
+      });
+    } else {
+      throw new Error(stkData.ResponseDescription || "STK push failed");
+    }
+
   } catch (error: any) {
     console.error("Error in mpesa-payment function:", error);
     return new Response(
