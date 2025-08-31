@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Mail, Phone, MapPin, Send, MessageCircle, HelpCircle, Building2 } from "lucide-react";
+import { Mail, Phone, MapPin, Send, MessageCircle, HelpCircle, Building2, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Contact = () => {
   const { toast } = useToast();
@@ -18,6 +19,9 @@ const Contact = () => {
     category: "",
     message: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentPhone, setPaymentPhone] = useState("");
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
@@ -33,22 +37,79 @@ const Contact = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Message Sent Successfully",
-      description: "Thank you for contacting us! We'll get back to you within 24 hours.",
-    });
-    console.log("Contact form submission:", formData);
-    // Reset form
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      subject: "",
-      category: "",
-      message: "",
-    });
+    setIsSubmitting(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('send-contact-email', {
+        body: formData
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Message Sent Successfully",
+        description: "Thank you for contacting us! We'll get back to you within 24 hours.",
+      });
+
+      // Reset form
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        subject: "",
+        category: "",
+        message: "",
+      });
+    } catch (error: any) {
+      console.error("Error sending contact form:", error);
+      toast({
+        title: "Error Sending Message",
+        description: "There was an error sending your message. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleMpesaPayment = async () => {
+    if (!paymentAmount || !paymentPhone) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter both amount and phone number for M-Pesa payment.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('mpesa-payment', {
+        body: {
+          amount: parseFloat(paymentAmount),
+          phoneNumber: paymentPhone,
+          description: "AfyaAlert Service Payment"
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Payment Request Sent",
+        description: data.instructions,
+      });
+
+      setPaymentAmount("");
+      setPaymentPhone("");
+    } catch (error: any) {
+      console.error("Error processing M-Pesa payment:", error);
+      toast({
+        title: "Payment Error",
+        description: "There was an error processing your payment. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const contactMethods = [
@@ -56,15 +117,29 @@ const Contact = () => {
       icon: Mail,
       title: "Email Us",
       description: "Send us an email anytime",
-      contact: "info@afyaalert.ke",
-      action: "mailto:info@afyaalert.ke",
+      contact: "nakhaimaisaac068@gmail.com",
+      action: "mailto:nakhaimaisaac068@gmail.com",
     },
     {
       icon: Phone,
-      title: "Call Us",
-      description: "Monday to Friday, 8AM - 6PM",
-      contact: "+254 700 123 456",
-      action: "tel:+254700123456",
+      title: "Call Us - Main",
+      description: "Primary contact number",
+      contact: "0718098165",
+      action: "tel:0718098165",
+    },
+    {
+      icon: Phone,
+      title: "Call Us - Alt 1",
+      description: "Alternative contact number",
+      contact: "0795077642",
+      action: "tel:0795077642",
+    },
+    {
+      icon: Phone,
+      title: "Call Us - Alt 2", 
+      description: "Alternative contact number",
+      contact: "0742441936",
+      action: "tel:0742441936",
     },
     {
       icon: MapPin,
@@ -219,9 +294,9 @@ const Contact = () => {
                     </p>
                   </div>
 
-                  <Button type="submit" className="w-full" size="lg">
+                  <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
                     <Send className="mr-2 h-4 w-4" />
-                    Send Message
+                    {isSubmitting ? "Sending..." : "Send Message"}
                   </Button>
                 </form>
               </CardContent>
@@ -283,6 +358,50 @@ const Contact = () => {
                     {index < faqs.length - 1 && <hr className="border-muted" />}
                   </div>
                 ))}
+              </CardContent>
+            </Card>
+
+            {/* M-Pesa Payment */}
+            <Card className="shadow-card">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <CreditCard className="mr-2 h-5 w-5" />
+                  M-Pesa Payment
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Make payments directly to our M-Pesa: <span className="font-semibold">0718098165</span>
+                </p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium">Amount (KES)</label>
+                    <Input
+                      type="number"
+                      value={paymentAmount}
+                      onChange={(e) => setPaymentAmount(e.target.value)}
+                      placeholder="Enter amount"
+                      min="1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Your Phone Number</label>
+                    <Input
+                      value={paymentPhone}
+                      onChange={(e) => setPaymentPhone(e.target.value)}
+                      placeholder="07XXXXXXXX"
+                    />
+                  </div>
+                  <Button onClick={handleMpesaPayment} className="w-full">
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    Pay via M-Pesa
+                  </Button>
+                </div>
+                <div className="mt-4 p-3 bg-accent/50 rounded-lg">
+                  <p className="text-xs text-muted-foreground">
+                    You will receive an M-Pesa prompt on your phone to complete the payment.
+                  </p>
+                </div>
               </CardContent>
             </Card>
 
