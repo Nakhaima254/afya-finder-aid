@@ -1,73 +1,130 @@
-# Welcome to your Lovable project
+AfyaAlert
 
-## Project info
+AfyaAlert is a Kenyan medicine price and availability tracker that helps users easily find essential medicines across pharmacies, compare prices, and get real-time availability updates.
 
-**URL**: https://lovable.dev/projects/5aaae737-7ec2-458d-93a0-bdd4ab6dbe80
+Built with React + Vite + TailwindCSS, AfyaAlert provides a clean, modern, and responsive health-tech dashboard experience.
 
-## How can I edit this code?
+🚀 Features
+1. Landing Page
 
-There are several ways of editing your application.
+Header with logo and navigation
 
-**Use Lovable**
+Hero section highlighting AfyaAlert’s mission
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/5aaae737-7ec2-458d-93a0-bdd4ab6dbe80) and start prompting.
+Call-to-action buttons (Search Medicines, View Dashboard, Sign Up)
 
-Changes made via Lovable will be committed automatically to this repo.
+Features section explaining key benefits
 
-**Use your preferred IDE**
+Testimonials or trusted partners section
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Footer with contact & social links
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+2. Medicine Search & Availability
 
-Follow these steps:
+Search bar to look up medicines by name
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+Results showing price, availability, and pharmacy location
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+Filters (by price, location, pharmacy, availability)
 
-# Step 3: Install the necessary dependencies.
-npm i
+Responsive cards displaying medicine info
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+3. Dashboard
+
+Personalized dashboard for logged-in users
+
+Saved medicine alerts (price drop or restock notifications)
+
+Graphs showing price trends (Recharts integration)
+
+Profile & settings management
+
+4. Mobile-First UI
+
+Optimized for mobile users first
+
+Responsive layouts scaling to tablet & desktop
+
+Clean design with white backgrounds, green/blue accents, rounded cards
+
+🛠️ Tech Stack
+
+Frontend Framework: React
+ + Vite
+
+Styling: TailwindCSS
+
+UI Components: shadcn/ui
+, lucide-react
+
+Charts: Recharts
+
+📦 Installation
+
+Clone the repository and install dependencies:
+
+git clone https://github.com/Nakhaima254/afya-finder-aid.git
+cd afyaalert
+npm install
+
+
+Run the development server:
+
 npm run dev
-```
 
-**Edit a file directly in GitHub**
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Build for production:
 
-**Use GitHub Codespaces**
+npm run build
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
 
-## What technologies are used for this project?
+Preview production build:
 
-This project is built with:
+npm run preview
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+📁 Project Structure
+afyaalert/
+├── public/          # Static assets
+├── src/
+│   ├── components/  # Reusable UI components
+│   ├── pages/       # Landing, Dashboard, Search, etc.
+│   ├── assets/      # Images, icons
+│   ├── App.jsx      # Root component
+│   ├── main.jsx     # Entry point
+│   └── styles/      # Tailwind + global styles
+└── package.json
 
-## How can I deploy this project?
+🎨 Design Guidelines
 
-Simply open [Lovable](https://lovable.dev/projects/5aaae737-7ec2-458d-93a0-bdd4ab6dbe80) and click on Share -> Publish.
+Colors:
 
-## Can I connect a custom domain to my Lovable project?
+Primary: Green (#16A34A)
 
-Yes, you can!
+Secondary: Blue (#2563EB)
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Background: White (#FFFFFF)
+
+Style: Clean, modern, minimal with rounded corners (rounded-2xl), soft shadows, and grid layouts.
+
+📌 Roadmap
+
+ Integrate live pharmacy API (medicine availability)
+
+ Add user authentication (login, signup)
+
+ Enable alerts via SMS/Email/WhatsApp
+
+ Multi-language support (English, Swahili)
+
+ Admin dashboard for pharmacy owners
+
+🤝 Contributing
+
+Contributions are welcome! Please fork this repo and submit a pull request.
+
+📜 License
+
+This project is licensed under the MIT License.
+
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
