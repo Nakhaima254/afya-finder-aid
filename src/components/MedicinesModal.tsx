@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -93,6 +93,9 @@ const MedicinesModal = ({ isOpen, onClose, pharmacyName, pharmacyId }: Medicines
             <Package className="h-5 w-5 text-primary" />
             Available Medicines - {pharmacyName}
           </DialogTitle>
+          <DialogDescription>
+            Browse available medicines and reserve what you need.
+          </DialogDescription>
         </DialogHeader>
 
         {loading ? (

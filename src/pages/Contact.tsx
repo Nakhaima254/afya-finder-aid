@@ -22,6 +22,8 @@ const Contact = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentPhone, setPaymentPhone] = useState("");
+  const [cardAmount, setCardAmount] = useState("");
+  const [cardEmail, setCardEmail] = useState("");
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
@@ -112,6 +114,50 @@ const Contact = () => {
     }
   };
 
+  const handleCardPayment = async () => {
+    if (!cardAmount || !cardEmail) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter both amount and email for card payment.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('paystack-payment', {
+        body: {
+          email: cardEmail,
+          amount: Math.round(parseFloat(cardAmount) * 100),
+          metadata: {
+            description: "AfyaAlert Service Payment",
+            payment_method: "card"
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.authorization_url) {
+        window.open(data.authorization_url, '_blank');
+        toast({
+          title: "Redirecting to Secure Checkout",
+          description: "Complete your payment in the new tab.",
+        });
+        setCardAmount("");
+        setCardEmail("");
+      } else {
+        throw new Error("Failed to create payment session");
+      }
+    } catch (error: any) {
+      console.error("Error processing card payment:", error);
+      toast({
+        title: "Payment Error",
+        description: error.message || "There was an error processing your payment.",
+        variant: "destructive",
+      });
+    }
+  };
   const contactMethods = [
     {
       icon: Mail,
@@ -405,7 +451,50 @@ const Contact = () => {
               </CardContent>
             </Card>
 
-            {/* Office Hours */}
+            {/* Card Payment */}
+            <Card className="shadow-card">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <CreditCard className="mr-2 h-5 w-5" />
+                  Card Payment
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Pay securely with your card via Paystack.
+                </p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium">Amount (KES)</label>
+                    <Input
+                      type="number"
+                      value={cardAmount}
+                      onChange={(e) => setCardAmount(e.target.value)}
+                      placeholder="Enter amount"
+                      min="1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Email Address</label>
+                    <Input
+                      type="email"
+                      value={cardEmail}
+                      onChange={(e) => setCardEmail(e.target.value)}
+                      placeholder="your@email.com"
+                    />
+                  </div>
+                  <Button onClick={handleCardPayment} className="w-full">
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    Pay via Card
+                  </Button>
+                </div>
+                <div className="mt-4 p-3 bg-accent/50 rounded-lg">
+                  <p className="text-xs text-muted-foreground">
+                    You will be redirected to a secure Paystack page to complete your payment.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
             <Card className="shadow-card">
               <CardHeader>
                 <CardTitle>Office Hours</CardTitle>

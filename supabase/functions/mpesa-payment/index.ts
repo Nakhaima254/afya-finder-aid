@@ -40,9 +40,14 @@ const getAccessToken = async (): Promise<string> => {
   return data.access_token;
 };
 
-const generatePassword = (): string => {
-  const timestamp = new Date().toISOString().replace(/[^0-9]/g, "").slice(0, -3);
-  const passkey = Deno.env.get("MPESA_PASSKEY") || "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919";
+const generatePassword = (timestamp: string): string => {
+  let passkey = (Deno.env.get("MPESA_PASSKEY") || "").trim();
+  // If using sandbox shortcode and the provided passkey looks invalid, fallback to known sandbox passkey
+  const looksInvalid = passkey.length < 40;
+  if ((BUSINESS_SHORT_CODE === "174379") && (looksInvalid || !passkey)) {
+    console.warn("MPESA_PASSKEY looks invalid for sandbox. Falling back to sandbox test passkey.");
+    passkey = "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919";
+  }
   const password = btoa(`${BUSINESS_SHORT_CODE}${passkey}${timestamp}`);
   return password;
 };
@@ -87,9 +92,9 @@ const handler = async (req: Request): Promise<Response> => {
     const accessToken = await getAccessToken();
     console.log("Access token obtained successfully");
 
-    // Generate password and timestamp
-    const password = generatePassword();
+    // Generate timestamp and password (must match)
     const timestamp = getTimestamp();
+    const password = generatePassword(timestamp);
 
     // STK Push request
     const stkPushPayload = {
@@ -137,7 +142,11 @@ const handler = async (req: Request): Promise<Response> => {
         },
       });
     } else {
-      throw new Error(stkData.ResponseDescription || "STK push failed");
+      const errMsg = stkData.errorMessage || stkData.ResponseDescription || "STK push failed";
+      return new Response(JSON.stringify({ success: false, error: errMsg, data: stkData }), {
+        status: 400,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
     }
 
   } catch (error: any) {

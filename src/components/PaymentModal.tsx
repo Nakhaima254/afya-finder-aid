@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -121,6 +121,9 @@ const PaymentModal = ({ isOpen, onClose, amount, description }: PaymentModalProp
             <Shield className="h-5 w-5 text-primary" />
             Complete Payment
           </DialogTitle>
+          <DialogDescription>
+            Choose a method and enter details to proceed to a secure Paystack checkout.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">

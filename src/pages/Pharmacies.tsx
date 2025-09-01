@@ -3,7 +3,7 @@ import { Building2, Shield, ShieldCheck, Clock, Mail, Phone, MapPin } from "luci
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { motion } from "framer-motion";
@@ -187,6 +187,9 @@ ${formData.message || 'None provided'}`
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Partner with AfyaAlert</DialogTitle>
+                <DialogDescription>
+                  Submit your details and we’ll review your pharmacy for certification.
+                </DialogDescription>
               </DialogHeader>
               <form onSubmit={handlePartnerSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
