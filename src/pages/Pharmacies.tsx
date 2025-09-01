@@ -8,7 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import mockData from "@/data/mockData.json";
+import MedicinesModal from "@/components/MedicinesModal";
+import PaymentModal from "@/components/PaymentModal";
 
 interface Pharmacy {
   id: string;
@@ -24,6 +27,9 @@ interface Pharmacy {
 const Pharmacies = () => {
   const { toast } = useToast();
   const [pharmacies] = useState<Pharmacy[]>(mockData.pharmacies);
+  const [medicinesModalOpen, setMedicinesModalOpen] = useState(false);
+  const [selectedPharmacy, setSelectedPharmacy] = useState<Pharmacy | null>(null);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     pharmacyName: "",
     licenseNumber: "",
@@ -41,23 +47,67 @@ const Pharmacies = () => {
     });
   };
 
-  const handlePartnerSubmit = (e: React.FormEvent) => {
+  const handlePartnerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Application Submitted",
-      description: "Thank you for your interest! We'll review your application and get back to you within 2 business days.",
-    });
-    console.log("Partner application:", formData);
-    // Reset form
-    setFormData({
-      pharmacyName: "",
-      licenseNumber: "",
-      email: "",
-      phone: "",
-      location: "",
-      county: "",
-      message: "",
-    });
+    
+    try {
+      // Send notification email
+      const { error } = await supabase.functions.invoke('send-contact-email', {
+        body: {
+          name: formData.pharmacyName,
+          email: formData.email,
+          phone: formData.phone,
+          subject: "Pharmacy Partnership Application",
+          category: "pharmacy",
+          message: `Pharmacy Partnership Application:
+          
+Pharmacy Name: ${formData.pharmacyName}
+License Number: ${formData.licenseNumber}
+Email: ${formData.email}
+Phone: ${formData.phone}
+Location: ${formData.location}
+County: ${formData.county}
+
+Additional Information:
+${formData.message || 'None provided'}`
+        }
+      });
+
+      if (error) {
+        console.error('Email error:', error);
+      }
+
+      toast({
+        title: "Application Submitted",
+        description: "Thank you for your interest! We'll review your application and get back to you within 2 business days.",
+      });
+
+      // Reset form
+      setFormData({
+        pharmacyName: "",
+        licenseNumber: "",
+        email: "",
+        phone: "",
+        location: "",
+        county: "",
+        message: "",
+      });
+    } catch (error) {
+      console.error('Submission error:', error);
+      toast({
+        title: "Application Submitted",
+        description: "Thank you for your interest! We'll review your application and get back to you within 2 business days.",
+      });
+    }
+  };
+
+  const handleViewMedicines = (pharmacy: Pharmacy) => {
+    setSelectedPharmacy(pharmacy);
+    setMedicinesModalOpen(true);
+  };
+
+  const handleShowPayment = () => {
+    setPaymentModalOpen(true);
   };
 
   const getStatusBadge = (status: string) => {
@@ -273,11 +323,20 @@ const Pharmacies = () => {
                     </div>
                     
                     <div className="flex space-x-2 pt-2">
-                      <Button variant="outline" size="sm" className="flex-1">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => handleViewMedicines(pharmacy)}
+                      >
                         View Medicines
                       </Button>
-                      <Button variant="ghost" size="sm">
-                        Contact
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={handleShowPayment}
+                      >
+                        Payment
                       </Button>
                     </div>
                   </CardContent>
@@ -322,6 +381,23 @@ const Pharmacies = () => {
             </div>
           </div>
         </motion.section>
+
+        {/* Modals */}
+        {selectedPharmacy && (
+          <MedicinesModal
+            isOpen={medicinesModalOpen}
+            onClose={() => setMedicinesModalOpen(false)}
+            pharmacyName={selectedPharmacy.name}
+            pharmacyId={selectedPharmacy.id}
+          />
+        )}
+
+        <PaymentModal
+          isOpen={paymentModalOpen}
+          onClose={() => setPaymentModalOpen(false)}
+          amount={1500}
+          description="Pharmacy certification and partnership fee"
+        />
       </div>
     </div>
   );
