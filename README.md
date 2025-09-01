@@ -1,4 +1,137 @@
-AfyaAlert
+AI PROMPT FOR THE WEB APP
+You are an expert frontend developer.  
+Build me a *working website for AfyaAlert*, a Kenyan medicine price and availability tracker.  
+
+### Requirements:
+- Use *React + Vite + TailwindCSS* for frontend.
+- Clean, modern UI inspired by *health-tech dashboards* (white background, green/blue accents, rounded cards).
+- Mobile-first responsive design.
+
+### Pages & Features:
+1. *Landing Page*
+   - Header: Logo (AfyaAlert) + Nav (Home, Search Medicines, Partner Pharmacies, About, Contact)
+   - Hero section: Tagline “Find affordable medicines near you” + search bar
+   - Call-to-action buttons: “Search Now” & “Partner with Us”
+   - Illustration/healthcare-themed hero image
+
+2. *Medicine Search Page*
+   - Search input for medicine name
+   - Mock results displayed in a grid of cards:
+     - Medicine name, strength, price, pharmacy name, location, availability badge (In-stock/Out of stock)
+     - “Reserve” button (click triggers a modal with confirmation)
+   - Ability to *filter by location* (dropdown: Nairobi, Mombasa, Kisumu, Eldoret)
+
+3. *Partner Pharmacies Page*
+   - Table/list view showing mock pharmacies with:
+     - Pharmacy name, license number, county, status (Verified / Pending Verification)
+   - Call-to-action button: “Join as a Partner Pharmacy”
+
+4. *About Page*
+   - Brief about AfyaAlert’s mission to improve medicine access
+   - Sections for: Transparency, Trust, Impact
+
+5. *Contact Page*
+   - Simple contact form (Name, Email, Message)
+   - Mock submission (console log form values)
+
+6. *Footer*
+   - Links: Privacy Policy, Terms of Service, PPB Verification
+   - Social icons
+
+### Functionality
+- Mock search results from a JSON file (medicine data with price + pharmacies).
+- Local state for filtering/searching.
+- Modal for “Reserve” button (fake reservation confirmation).
+- Smooth animations (Framer Motion).
+- Fully responsive.
+
+### Tech Stack
+- React (Vite)
+- TailwindCSS
+- Framer Motion (for smooth animations)
+- Lucide React (for icons)
+
+Output:  
+- Full codebase with all pages/components wired up.  
+- Dummy JSON file for medicine + pharmacy data.  
+- Include comments so I can later connect real APIs (Firebase, REST).
+
+BACKEND PROMPT
+with the front end done let us create backend: You are an expert backend engineer. Build me a Node.js + Express + MongoDB backend for a project called "AfyaAlert". 
+
+## Requirements:
+- Use Express for the REST API
+- Use MongoDB with Mongoose for database models
+- Implement JWT-based authentication for users
+- Structure the project in MVC style (routes, controllers, models)
+- Use environment variables (.env) for sensitive data
+
+## Database Models:
+1. User
+   - name (string)
+   - email (string, unique)
+   - password (hashed)
+   - role (enum: consumer | pharmacy | admin)
+
+2. Pharmacy
+   - name (string)
+   - location (string)
+   - license (string, unique)
+   - verified (boolean, default false)
+   - contact (string)
+
+3. Medicine
+   - name (string)
+   - strength (string)
+   - price (number)
+   - availability (boolean)
+   - pharmacyId (ObjectId ref to Pharmacy)
+   - updatedAt (date)
+
+4. Reservation
+   - userId (ObjectId ref to User)
+   - medicineId (ObjectId ref to Medicine)
+   - pharmacyId (ObjectId ref to Pharmacy)
+   - status (enum: pending | confirmed | cancelled)
+   - createdAt (date)
+
+## API Endpoints:
+### Auth
+- POST /api/register → Register user
+- POST /api/login → Login user (return JWT)
+
+### Users
+- GET /api/users/me → Get logged-in user profile
+
+### Pharmacies
+- POST /api/pharmacies/register → Register a pharmacy
+- GET /api/pharmacies → List pharmacies
+- PUT /api/pharmacies/:id/verify → Admin-only: verify a pharmacy
+
+### Medicines
+- POST /api/medicines → Add medicine (pharmacy role only)
+- GET /api/medicines → List/search medicines (filters: name, location)
+- PUT /api/medicines/:id → Update medicine info
+
+### Reservations
+- POST /api/reservations → Reserve a medicine
+- GET /api/reservations/:userId → Get user reservations
+
+## Security & Validation:
+- Hash passwords using bcrypt
+- Protect routes with JWT middleware
+- Role-based access control (consumer, pharmacy, admin)
+- Validate request bodies using express-validator
+
+## Setup:
+- Include instructions in README for:
+  1. npm install
+  2. create .env file with MONGO_URI and JWT_SECRET
+  3. npm run dev (use nodemon)
+ 
+- 
+
+..........................AFYAALERT.............
 
 AfyaAlert is a Kenyan medicine price and availability tracker that helps users easily find essential medicines across pharmacies, compare prices, and get real-time availability updates.
 
