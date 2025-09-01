@@ -1,4 +1,6 @@
 Live Web App. https://preview--afya-finder-aid.lovable.app/
+ PITCH DECK LINK-[https://www.canva.com/design/DAGxwIzFha4/AlsyIAYkJ0YZw9XUUmj0JA/edit?utm_content=DAGxwIzFha4&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
+- ](https://www.canva.com/design/DAGxwIzFha4/b9yVDyfyhO864gJFLIwCiw/view?utm_content=DAGxwIzFha4&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h9a5a5b0fd8)
 
 AI PROMPT FOR THE WEB APP
 You are an expert frontend developer.  
@@ -132,8 +134,7 @@ with the front end done let us create backend: You are an expert backend enginee
   3. npm run dev (use nodemon)
 
 
-   PITCH DECK LINK-https://www.canva.com/design/DAGxwIzFha4/AlsyIAYkJ0YZw9XUUmj0JA/edit?utm_content=DAGxwIzFha4&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
-- 
+  
 
 ..........................AFYAALERT.............
 
