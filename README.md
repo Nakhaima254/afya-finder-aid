@@ -1,3 +1,5 @@
+Live Web App. https://preview--afya-finder-aid.lovable.app/
+
 AI PROMPT FOR THE WEB APP
 You are an expert frontend developer.  
 Build me a *working website for AfyaAlert*, a Kenyan medicine price and availability tracker.  
