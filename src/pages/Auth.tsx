@@ -21,8 +21,14 @@ const Auth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
+    console.log("Auth component mounted");
+    console.log("Current URL:", window.location.href);
+    console.log("Search params:", Object.fromEntries(searchParams.entries()));
+    console.log("Hash params:", window.location.hash);
+    
     // Handle email confirmation
     const handleEmailConfirmation = async () => {
+      console.log("Starting email confirmation check");
       const error = searchParams.get('error');
       const errorDescription = searchParams.get('error_description');
       
@@ -80,6 +86,7 @@ const Auth = () => {
       }
     };
 
+    console.log("Calling handleEmailConfirmation");
     handleEmailConfirmation();
   }, [navigate, toast, searchParams]);
 
@@ -207,6 +214,8 @@ const Auth = () => {
       setIsLoading(false);
     }
   };
+
+  console.log("Rendering Auth component, activeTab:", activeTab);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 flex items-center justify-center p-4">
