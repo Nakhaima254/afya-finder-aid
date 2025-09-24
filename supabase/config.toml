@@ -3,7 +3,7 @@ project_id = "hwomajdxcbtbsmbaucro"
 [auth]
 enabled = true
 site_url = "http://localhost:3000"
-additional_redirect_urls = ["https://lovable.dev", "http://localhost:5173"]
+additional_redirect_urls = ["https://lovable.dev", "http://localhost:5173", "https://preview--afya-finder-aid.lovable.app"]
 jwt_expiry = 3600
 
 [auth.email]

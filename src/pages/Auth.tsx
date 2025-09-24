@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,19 +16,72 @@ const Auth = () => {
   const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("login");
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if user is already logged in
-    const checkUser = async () => {
+    // Handle email confirmation
+    const handleEmailConfirmation = async () => {
+      const error = searchParams.get('error');
+      const errorDescription = searchParams.get('error_description');
+      
+      if (error) {
+        toast({
+          title: "Email Confirmation Failed",
+          description: errorDescription || "There was an error confirming your email.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check if user is coming from email confirmation
       const { data: { session } } = await supabase.auth.getSession();
+      
       if (session) {
+        // User is confirmed and logged in
+        toast({
+          title: "Email Confirmed Successfully!",
+          description: "Your email has been verified. Welcome to AfyaAlert!",
+        });
         navigate("/");
+        return;
+      }
+
+      // Check if there are auth tokens in URL (email confirmation)
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+      
+      if (accessToken && refreshToken) {
+        // Set the session from the tokens
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+        if (!sessionError) {
+          toast({
+            title: "Email Confirmed Successfully!",
+            description: "Your email has been verified. Welcome to AfyaAlert!",
+          });
+          navigate("/");
+          return;
+        }
+      }
+
+      // If no session and no tokens, check if user already exists and is just trying to sign in
+      if (searchParams.get('type') === 'signup') {
+        setActiveTab("login");
+        toast({
+          title: "Please Sign In",
+          description: "Your email has been confirmed. Please sign in to continue.",
+        });
       }
     };
-    checkUser();
-  }, [navigate]);
+
+    handleEmailConfirmation();
+  }, [navigate, toast, searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,11 +116,14 @@ const Auth = () => {
           });
         }
       } else {
+        // Check if this is after email confirmation
+        const redirectUrl = searchParams.get('redirect') || '/';
+        
         toast({
           title: "Welcome back!",
           description: "You have been successfully logged in.",
         });
-        navigate("/");
+        navigate(redirectUrl);
       }
     } catch (error: any) {
       toast({
@@ -133,8 +189,8 @@ const Auth = () => {
         }
       } else {
         toast({
-          title: "Account Created!",
-          description: "Please check your email to verify your account before signing in.",
+          title: "Account Created Successfully!",
+          description: "Please check your email and click the confirmation link to verify your account, then return here to sign in.",
         });
         setActiveTab("login");
         setEmail("");
