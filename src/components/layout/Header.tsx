@@ -1,12 +1,22 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Heart } from "lucide-react";
+import { Menu, X, Heart, User, LogOut } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/hooks/useAuth";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
+  const { user, signOut } = useAuth();
 
   const navigation = [
     { name: "Home", href: "/" },
@@ -17,6 +27,10 @@ const Header = () => {
   ];
 
   const isActive = (path: string) => location.pathname === path;
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -47,6 +61,45 @@ const Header = () => {
                 {item.name}
               </Link>
             ))}
+          </div>
+
+          {/* Desktop Auth */}
+          <div className="hidden md:flex items-center space-x-4">
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback>
+                        {user.email?.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <div className="flex flex-col space-y-1 p-2">
+                    <p className="text-sm font-medium leading-none">
+                      {user.user_metadata?.name || user.email}
+                    </p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {user.email}
+                    </p>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sign out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button asChild variant="default">
+                <Link to="/auth">
+                  <User className="mr-2 h-4 w-4" />
+                  Sign In
+                </Link>
+              </Button>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -90,6 +143,37 @@ const Header = () => {
                     {item.name}
                   </Link>
                 ))}
+                
+                {/* Mobile Auth */}
+                <div className="pt-4 border-t border-border/40">
+                  {user ? (
+                    <div className="space-y-3">
+                      <div className="px-3 py-2">
+                        <p className="text-sm font-medium">
+                          {user.user_metadata?.name || user.email}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {user.email}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        onClick={handleSignOut}
+                        className="w-full justify-start"
+                      >
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Sign out
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button asChild variant="default" className="w-full">
+                      <Link to="/auth">
+                        <User className="mr-2 h-4 w-4" />
+                        Sign In
+                      </Link>
+                    </Button>
+                  )}
+                </div>
               </div>
             </motion.div>
           )}

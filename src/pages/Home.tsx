@@ -14,7 +14,7 @@ const Home = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      navigate(`/auth?redirect=/search&q=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
 
@@ -90,7 +90,7 @@ const Home = () => {
               {/* CTA Buttons */}
               <div className="flex flex-col space-y-3 sm:flex-row sm:space-x-4 sm:space-y-0">
                 <Button asChild variant="default" size="lg">
-                  <Link to="/search">
+                  <Link to="/auth">
                     Browse Medicines
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
@@ -208,7 +208,7 @@ const Home = () => {
             
             <div className="flex flex-col space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0 justify-center">
               <Button asChild variant="secondary" size="xl">
-                <Link to="/search">
+                <Link to="/auth">
                   <Search className="mr-2 h-5 w-5" />
                   Start Searching
                 </Link>
