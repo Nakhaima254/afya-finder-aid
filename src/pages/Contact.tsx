@@ -1,51 +1,56 @@
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Mail, Phone, MapPin, Send, MessageCircle, HelpCircle, Building2, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { contactSchema, paymentSchema, type ContactFormData, type PaymentFormData } from "@/lib/validations";
 
 const Contact = () => {
   const { toast } = useToast();
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    subject: "",
-    category: "",
-    message: "",
-  });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [paymentAmount, setPaymentAmount] = useState("");
-  const [paymentPhone, setPaymentPhone] = useState("");
-  const [cardAmount, setCardAmount] = useState("");
-  const [cardEmail, setCardEmail] = useState("");
+  
+  // Contact form with validation
+  const contactForm = useForm<ContactFormData>({
+    resolver: zodResolver(contactSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      message: "",
+    },
+  });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
+  // Payment forms with validation
+  const mpesaForm = useForm<PaymentFormData>({
+    resolver: zodResolver(paymentSchema),
+    defaultValues: {
+      amount: 0,
+      email: "",
+      phone: "",
+    },
+  });
 
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-  };
+  const cardForm = useForm<PaymentFormData>({
+    resolver: zodResolver(paymentSchema),
+    defaultValues: {
+      amount: 0,
+      email: "",
+      phone: "",
+    },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (data: ContactFormData) => {
     setIsSubmitting(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('send-contact-email', {
-        body: formData
+      const { data: response, error } = await supabase.functions.invoke('send-contact-email', {
+        body: data
       });
 
       if (error) throw error;
@@ -56,14 +61,7 @@ const Contact = () => {
       });
 
       // Reset form
-      setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        subject: "",
-        category: "",
-        message: "",
-      });
+      contactForm.reset();
     } catch (error: any) {
       console.error("Error sending contact form:", error);
       toast({
@@ -76,21 +74,12 @@ const Contact = () => {
     }
   };
 
-  const handleMpesaPayment = async () => {
-    if (!paymentAmount || !paymentPhone) {
-      toast({
-        title: "Missing Information",
-        description: "Please enter both amount and phone number for M-Pesa payment.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const handleMpesaPayment = async (data: PaymentFormData) => {
     try {
-      const { data, error } = await supabase.functions.invoke('mpesa-payment', {
+      const { data: response, error } = await supabase.functions.invoke('mpesa-payment', {
         body: {
-          amount: parseFloat(paymentAmount),
-          phoneNumber: paymentPhone,
+          amount: data.amount,
+          phoneNumber: data.phone,
           description: "AfyaAlert Service Payment"
         }
       });
@@ -99,11 +88,10 @@ const Contact = () => {
 
       toast({
         title: "Payment Request Sent",
-        description: data.instructions,
+        description: response.instructions,
       });
 
-      setPaymentAmount("");
-      setPaymentPhone("");
+      mpesaForm.reset();
     } catch (error: any) {
       console.error("Error processing M-Pesa payment:", error);
       toast({
@@ -114,21 +102,12 @@ const Contact = () => {
     }
   };
 
-  const handleCardPayment = async () => {
-    if (!cardAmount || !cardEmail) {
-      toast({
-        title: "Missing Information",
-        description: "Please enter both amount and email for card payment.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const handleCardPayment = async (data: PaymentFormData) => {
     try {
-      const { data, error } = await supabase.functions.invoke('paystack-payment', {
+      const { data: response, error } = await supabase.functions.invoke('paystack-payment', {
         body: {
-          email: cardEmail,
-          amount: Math.round(parseFloat(cardAmount) * 100),
+          email: data.email,
+          amount: Math.round(data.amount * 100),
           metadata: {
             description: "AfyaAlert Service Payment",
             payment_method: "card"
@@ -138,14 +117,13 @@ const Contact = () => {
 
       if (error) throw error;
 
-      if (data?.authorization_url) {
-        window.open(data.authorization_url, '_blank');
+      if (response?.authorization_url) {
+        window.open(response.authorization_url, '_blank');
         toast({
           title: "Redirecting to Secure Checkout",
           description: "Complete your payment in the new tab.",
         });
-        setCardAmount("");
-        setCardEmail("");
+        cardForm.reset();
       } else {
         throw new Error("Failed to create payment session");
       }
@@ -158,6 +136,7 @@ const Contact = () => {
       });
     }
   };
+
   const contactMethods = [
     {
       icon: Mail,
@@ -194,15 +173,6 @@ const Contact = () => {
       contact: "Nairobi, Kenya",
       action: "#",
     },
-  ];
-
-  const categories = [
-    { value: "general", label: "General Inquiry" },
-    { value: "pharmacy", label: "Pharmacy Partnership" },
-    { value: "technical", label: "Technical Support" },
-    { value: "feedback", label: "Feedback & Suggestions" },
-    { value: "media", label: "Media & Press" },
-    { value: "other", label: "Other" },
   ];
 
   const faqs = [
@@ -254,97 +224,74 @@ const Contact = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div>
-                      <label className="text-sm font-medium">Full Name *</label>
-                      <Input
-                        name="name"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        placeholder="Your full name"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Email Address *</label>
-                      <Input
-                        name="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        placeholder="your.email@example.com"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div>
-                      <label className="text-sm font-medium">Phone Number</label>
-                      <Input
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        placeholder="+254XXXXXXXXX"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Category *</label>
-                      <Select
-                        value={formData.category}
-                        onValueChange={(value) => handleSelectChange("category", value)}
-                        required
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories.map((category) => (
-                            <SelectItem key={category.value} value={category.value}>
-                              {category.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium">Subject *</label>
-                    <Input
-                      name="subject"
-                      value={formData.subject}
-                      onChange={handleInputChange}
-                      placeholder="Brief subject of your message"
-                      required
+                <Form {...contactForm}>
+                  <form onSubmit={contactForm.handleSubmit(handleSubmit)} className="space-y-6">
+                    <FormField
+                      control={contactForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Full Name *</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Your full name"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
 
-                  <div>
-                    <label className="text-sm font-medium">Message *</label>
-                    <Textarea
+                    <FormField
+                      control={contactForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email Address *</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="email"
+                              placeholder="your.email@example.com"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={contactForm.control}
                       name="message"
-                      value={formData.message}
-                      onChange={handleInputChange}
-                      placeholder="Tell us how we can help you..."
-                      rows={5}
-                      required
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Message *</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Tell us how we can help you..."
+                              rows={5}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
 
-                  <div className="bg-accent/50 p-4 rounded-lg">
-                    <p className="text-sm">
-                      <strong>Response Time:</strong> We typically respond within 24 hours during business days. 
-                      For urgent pharmacy-related issues, please call us directly.
-                    </p>
-                  </div>
+                    <div className="bg-accent/50 p-4 rounded-lg">
+                      <p className="text-sm">
+                        <strong>Response Time:</strong> We typically respond within 24 hours during business days. 
+                        For urgent pharmacy-related issues, please call us directly.
+                      </p>
+                    </div>
 
-                  <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
-                    <Send className="mr-2 h-4 w-4" />
-                    {isSubmitting ? "Sending..." : "Send Message"}
-                  </Button>
-                </form>
+                    <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
+                      <Send className="mr-2 h-4 w-4" />
+                      {isSubmitting ? "Sending..." : "Send Message"}
+                    </Button>
+                  </form>
+                </Form>
               </CardContent>
             </Card>
           </motion.div>
@@ -419,30 +366,51 @@ const Contact = () => {
                 <p className="text-sm text-muted-foreground">
                   Make payments directly to our M-Pesa: <span className="font-semibold">0718098165</span>
                 </p>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm font-medium">Amount (KES)</label>
-                    <Input
-                      type="number"
-                      value={paymentAmount}
-                      onChange={(e) => setPaymentAmount(e.target.value)}
-                      placeholder="Enter amount"
-                      min="1"
+                <Form {...mpesaForm}>
+                  <form onSubmit={mpesaForm.handleSubmit(handleMpesaPayment)} className="space-y-3">
+                    <FormField
+                      control={mpesaForm.control}
+                      name="amount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Amount (KES)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="Enter amount"
+                              min="1"
+                              {...field}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Your Phone Number</label>
-                    <Input
-                      value={paymentPhone}
-                      onChange={(e) => setPaymentPhone(e.target.value)}
-                      placeholder="07XXXXXXXX"
+                    
+                    <FormField
+                      control={mpesaForm.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Your Phone Number</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="07XXXXXXXX"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-                  <Button onClick={handleMpesaPayment} className="w-full">
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    Pay via M-Pesa
-                  </Button>
-                </div>
+                    
+                    <Button type="submit" className="w-full">
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Pay via M-Pesa
+                    </Button>
+                  </form>
+                </Form>
                 <div className="mt-4 p-3 bg-accent/50 rounded-lg">
                   <p className="text-xs text-muted-foreground">
                     You will receive an M-Pesa prompt on your phone to complete the payment.
@@ -463,61 +431,55 @@ const Contact = () => {
                 <p className="text-sm text-muted-foreground">
                   Pay securely with your card via Paystack.
                 </p>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm font-medium">Amount (KES)</label>
-                    <Input
-                      type="number"
-                      value={cardAmount}
-                      onChange={(e) => setCardAmount(e.target.value)}
-                      placeholder="Enter amount"
-                      min="1"
+                <Form {...cardForm}>
+                  <form onSubmit={cardForm.handleSubmit(handleCardPayment)} className="space-y-3">
+                    <FormField
+                      control={cardForm.control}
+                      name="amount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Amount (KES)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="Enter amount"
+                              min="1"
+                              {...field}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Email Address</label>
-                    <Input
-                      type="email"
-                      value={cardEmail}
-                      onChange={(e) => setCardEmail(e.target.value)}
-                      placeholder="your@email.com"
+                    
+                    <FormField
+                      control={cardForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email Address</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="email"
+                              placeholder="your@email.com"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-                  <Button onClick={handleCardPayment} className="w-full">
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    Pay via Card
-                  </Button>
-                </div>
+                    
+                    <Button type="submit" className="w-full">
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Pay via Card
+                    </Button>
+                  </form>
+                </Form>
                 <div className="mt-4 p-3 bg-accent/50 rounded-lg">
                   <p className="text-xs text-muted-foreground">
-                    You will be redirected to a secure Paystack page to complete your payment.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle>Office Hours</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>Monday - Friday:</span>
-                    <span className="font-medium">8:00 AM - 6:00 PM</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Saturday:</span>
-                    <span className="font-medium">9:00 AM - 2:00 PM</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Sunday:</span>
-                    <span className="font-medium">Closed</span>
-                  </div>
-                </div>
-                <div className="mt-4 p-3 bg-accent/50 rounded-lg">
-                  <p className="text-xs text-muted-foreground">
-                    Times are in East Africa Time (EAT). Emergency pharmacy inquiries 
-                    may be handled outside these hours.
+                    Secure payment processing via Paystack. You'll be redirected to complete your payment.
                   </p>
                 </div>
               </CardContent>

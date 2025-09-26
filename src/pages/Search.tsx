@@ -1,14 +1,18 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Search as SearchIcon, MapPin, Filter, AlertCircle, CheckCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { searchSchema, type SearchFormData } from "@/lib/validations";
 import mockData from "@/data/mockData.json";
 
 interface Medicine {
@@ -26,11 +30,18 @@ interface Medicine {
 const Search = () => {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [filteredMedicines, setFilteredMedicines] = useState<Medicine[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Search form with validation
+  const searchForm = useForm<SearchFormData>({
+    resolver: zodResolver(searchSchema),
+    defaultValues: {
+      query: searchParams.get("q") || "",
+    },
+  });
 
   useEffect(() => {
     // Load mock data
@@ -41,10 +52,11 @@ const Search = () => {
   useEffect(() => {
     // Filter medicines based on search query and location
     let filtered = medicines;
+    const currentQuery = searchForm.getValues("query");
 
-    if (searchQuery.trim()) {
+    if (currentQuery.trim()) {
       filtered = filtered.filter((medicine) =>
-        medicine.name.toLowerCase().includes(searchQuery.toLowerCase())
+        medicine.name.toLowerCase().includes(currentQuery.toLowerCase())
       );
     }
 
@@ -55,14 +67,50 @@ const Search = () => {
     }
 
     setFilteredMedicines(filtered);
-  }, [searchQuery, selectedLocation, medicines]);
+  }, [searchForm, selectedLocation, medicines]);
 
-  const handleSearch = () => {
+  const handleSearch = (data: SearchFormData) => {
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    
+    try {
+      const query = data.query.trim();
+      
+      if (!query) {
+        toast({
+          title: "Empty Search",
+          description: "Please enter a medicine name to search.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Filter medicines based on validated search query and location
+      let filtered = medicines.filter((medicine) =>
+        medicine.name.toLowerCase().includes(query.toLowerCase())
+      );
+
+      if (selectedLocation && selectedLocation !== "all") {
+        filtered = filtered.filter((medicine) =>
+          medicine.county === selectedLocation
+        );
+      }
+
+      setFilteredMedicines(filtered);
+
+      toast({
+        title: "Search Complete",
+        description: `Found ${filtered.length} result(s) for "${query}"`,
+      });
+    } catch (error) {
+      toast({
+        title: "Search Error",
+        description: "Invalid search query. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-    }, 500);
+    }
   };
 
   const handleReserve = (medicine: Medicine) => {
@@ -121,40 +169,54 @@ const Search = () => {
           {/* Search Form */}
           <Card className="shadow-card">
             <CardContent className="p-6">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div className="relative">
-                  <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    placeholder="Search medicine name..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                
-                <Select value={selectedLocation} onValueChange={setSelectedLocation}>
-                  <SelectTrigger>
-                    <div className="flex items-center">
-                      <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
-                      <SelectValue placeholder="Select location" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Locations</SelectItem>
-                    {mockData.counties.map((county) => (
-                      <SelectItem key={county} value={county}>
-                        {county}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <Form {...searchForm}>
+                <form onSubmit={searchForm.handleSubmit(handleSearch)}>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <FormField
+                      control={searchForm.control}
+                      name="query"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <div className="relative">
+                              <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                              <Input
+                                type="text"
+                                placeholder="Search medicine name..."
+                                className="pl-10"
+                                {...field}
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+                      <SelectTrigger>
+                        <div className="flex items-center">
+                          <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
+                          <SelectValue placeholder="Select location" />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Locations</SelectItem>
+                        {mockData.counties.map((county) => (
+                          <SelectItem key={county} value={county}>
+                            {county}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
 
-                <Button onClick={handleSearch} disabled={isLoading}>
-                  <Filter className="mr-2 h-4 w-4" />
-                  {isLoading ? "Searching..." : "Search"}
-                </Button>
-              </div>
+                    <Button type="submit" disabled={isLoading}>
+                      <Filter className="mr-2 h-4 w-4" />
+                      {isLoading ? "Searching..." : "Search"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
             </CardContent>
           </Card>
         </motion.div>
