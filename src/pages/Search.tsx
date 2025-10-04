@@ -10,21 +10,24 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { searchSchema, type SearchFormData } from "@/lib/validations";
-import mockData from "@/data/mockData.json";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Medicine {
   id: string;
   name: string;
   strength: string;
   price: number;
-  pharmacyName: string;
-  location: string;
-  county: string;
-  availability: string;
-  pharmacyId: string;
+  pharmacy_id: string;
+  availability: boolean;
+  pharmacies?: {
+    name: string;
+    location: string;
+  };
 }
 
 const Search = () => {
@@ -34,6 +37,9 @@ const Search = () => {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [filteredMedicines, setFilteredMedicines] = useState<Medicine[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [allMedicines, setAllMedicines] = useState<Medicine[]>([]);
+  const [autocompleteOpen, setAutocompleteOpen] = useState(false);
+  const [locations, setLocations] = useState<string[]>([]);
 
   // Search form with validation
   const searchForm = useForm<SearchFormData>({
@@ -44,10 +50,57 @@ const Search = () => {
   });
 
   useEffect(() => {
-    // Load mock data
-    setMedicines(mockData.medicines);
-    setFilteredMedicines(mockData.medicines);
-  }, []);
+    // Load medicines from Supabase
+    const fetchMedicines = async () => {
+      const { data, error } = await supabase
+        .from('medicines')
+        .select(`
+          id,
+          name,
+          strength,
+          price,
+          availability,
+          pharmacy_id,
+          pharmacies (
+            name,
+            location
+          )
+        `)
+        .eq('availability', true);
+
+      if (error) {
+        console.error('Error fetching medicines:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load medicines. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const formattedMedicines = data.map(med => ({
+        id: med.id,
+        name: med.name,
+        strength: med.strength,
+        price: Number(med.price),
+        pharmacy_id: med.pharmacy_id,
+        availability: med.availability,
+        pharmacies: med.pharmacies as any
+      }));
+
+      setMedicines(formattedMedicines);
+      setAllMedicines(formattedMedicines);
+      setFilteredMedicines(formattedMedicines);
+
+      // Extract unique locations
+      const uniqueLocations = [...new Set(formattedMedicines
+        .map(m => m.pharmacies?.location)
+        .filter(Boolean))] as string[];
+      setLocations(uniqueLocations);
+    };
+
+    fetchMedicines();
+  }, [toast]);
 
   useEffect(() => {
     // Filter medicines based on search query and location
@@ -62,7 +115,7 @@ const Search = () => {
 
     if (selectedLocation && selectedLocation !== "all") {
       filtered = filtered.filter((medicine) =>
-        medicine.county === selectedLocation
+        medicine.pharmacies?.location === selectedLocation
       );
     }
 
@@ -92,7 +145,7 @@ const Search = () => {
 
       if (selectedLocation && selectedLocation !== "all") {
         filtered = filtered.filter((medicine) =>
-          medicine.county === selectedLocation
+          medicine.pharmacies?.location === selectedLocation
         );
       }
 
@@ -113,40 +166,77 @@ const Search = () => {
     }
   };
 
-  const handleReserve = (medicine: Medicine) => {
-    toast({
-      title: "Reservation Confirmed",
-      description: `${medicine.name} has been reserved at ${medicine.pharmacyName}. Please collect within 24 hours.`,
-    });
-    console.log("Reserve medicine:", medicine);
+  const handleReserve = async (medicine: Medicine) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in to reserve medicines.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Create reservation in database
+      const { error } = await supabase
+        .from('reservations')
+        .insert({
+          user_id: user.id,
+          medicine_id: medicine.id,
+          pharmacy_id: medicine.pharmacy_id,
+          status: 'pending'
+        });
+
+      if (error) {
+        toast({
+          title: "Reservation Failed",
+          description: "Unable to reserve medicine. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Reservation Confirmed",
+        description: `${medicine.name} has been reserved at ${medicine.pharmacies?.name}. Please collect within 24 hours.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An error occurred. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const getAvailabilityBadge = (availability: string) => {
-    switch (availability) {
-      case "In Stock":
-        return (
-          <Badge variant="default" className="bg-success text-success-foreground">
-            <CheckCircle className="mr-1 h-3 w-3" />
-            In Stock
-          </Badge>
-        );
-      case "Low Stock":
-        return (
-          <Badge variant="default" className="bg-warning text-warning-foreground">
-            <Clock className="mr-1 h-3 w-3" />
-            Low Stock
-          </Badge>
-        );
-      case "Out of Stock":
-        return (
-          <Badge variant="destructive">
-            <AlertCircle className="mr-1 h-3 w-3" />
-            Out of Stock
-          </Badge>
-        );
-      default:
-        return null;
+  const getAvailabilityBadge = (availability: boolean) => {
+    if (availability) {
+      return (
+        <Badge variant="default" className="bg-success text-success-foreground">
+          <CheckCircle className="mr-1 h-3 w-3" />
+          In Stock
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge variant="destructive">
+          <AlertCircle className="mr-1 h-3 w-3" />
+          Out of Stock
+        </Badge>
+      );
     }
+  };
+
+  // Get autocomplete suggestions
+  const getAutocompleteSuggestions = (query: string) => {
+    if (!query.trim()) return [];
+    
+    const uniqueMedicines = [...new Set(allMedicines.map(m => m.name))];
+    return uniqueMedicines
+      .filter(name => name.toLowerCase().includes(query.toLowerCase()))
+      .slice(0, 8);
   };
 
   return (
@@ -176,17 +266,49 @@ const Search = () => {
                       control={searchForm.control}
                       name="query"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="flex-1">
                           <FormControl>
-                            <div className="relative">
-                              <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                              <Input
-                                type="text"
-                                placeholder="Search medicine name..."
-                                className="pl-10"
-                                {...field}
-                              />
-                            </div>
+                            <Popover open={autocompleteOpen} onOpenChange={setAutocompleteOpen}>
+                              <PopoverTrigger asChild>
+                                <div className="relative">
+                                  <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                  <Input
+                                    type="text"
+                                    placeholder="Search medicine name..."
+                                    className="pl-10"
+                                    {...field}
+                                    onChange={(e) => {
+                                      field.onChange(e);
+                                      setAutocompleteOpen(e.target.value.length > 0);
+                                    }}
+                                  />
+                                </div>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                                <Command>
+                                  <CommandInput placeholder="Search medicines..." value={field.value} />
+                                  <CommandList>
+                                    <CommandEmpty>No medicines found.</CommandEmpty>
+                                    <CommandGroup>
+                                      {getAutocompleteSuggestions(field.value).map((suggestion) => (
+                                        <CommandItem
+                                          key={suggestion}
+                                          value={suggestion}
+                                          onSelect={(value) => {
+                                            field.onChange(value);
+                                            setAutocompleteOpen(false);
+                                            searchForm.handleSubmit(handleSearch)();
+                                          }}
+                                        >
+                                          <SearchIcon className="mr-2 h-4 w-4" />
+                                          {suggestion}
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -202,9 +324,9 @@ const Search = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Locations</SelectItem>
-                        {mockData.counties.map((county) => (
-                          <SelectItem key={county} value={county}>
-                            {county}
+                        {locations.map((location) => (
+                          <SelectItem key={location} value={location}>
+                            {location}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -281,10 +403,10 @@ const Search = () => {
                         <div className="space-y-2">
                           <div className="flex items-center text-sm">
                             <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
-                            <span>{medicine.pharmacyName}</span>
+                            <span>{medicine.pharmacies?.name}</span>
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {medicine.location}, {medicine.county}
+                            {medicine.pharmacies?.location}
                           </div>
                         </div>
 
@@ -292,10 +414,10 @@ const Search = () => {
                           <DialogTrigger asChild>
                             <Button
                               className="w-full"
-                              disabled={medicine.availability === "Out of Stock"}
-                              variant={medicine.availability === "Out of Stock" ? "outline" : "default"}
+                              disabled={!medicine.availability}
+                              variant={!medicine.availability ? "outline" : "default"}
                             >
-                              {medicine.availability === "Out of Stock" ? "Out of Stock" : "Reserve Medicine"}
+                              {!medicine.availability ? "Out of Stock" : "Reserve Medicine"}
                             </Button>
                           </DialogTrigger>
                           <DialogContent>
@@ -309,10 +431,10 @@ const Search = () => {
                                   Price: KSh {medicine.price.toLocaleString()}
                                 </p>
                                 <p className="text-sm text-muted-foreground">
-                                  Pharmacy: {medicine.pharmacyName}
+                                  Pharmacy: {medicine.pharmacies?.name}
                                 </p>
                                 <p className="text-sm text-muted-foreground">
-                                  Location: {medicine.location}, {medicine.county}
+                                  Location: {medicine.pharmacies?.location}
                                 </p>
                               </div>
                               <div className="bg-accent/50 p-4 rounded-lg">
