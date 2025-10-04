@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { withRetry, handleSupabaseError } from "@/lib/networkUtils";
 import { contactSchema, paymentSchema, type ContactFormData, type PaymentFormData } from "@/lib/validations";
 
 const Contact = () => {
@@ -49,26 +50,29 @@ const Contact = () => {
     setIsSubmitting(true);
 
     try {
-      const { data: response, error } = await supabase.functions.invoke('send-contact-email', {
-        body: data
-      });
-
-      if (error) throw error;
+      await withRetry(
+        async () => {
+          const { error } = await supabase.functions.invoke('send-contact-email', {
+            body: data
+          });
+          if (error) throw error;
+        },
+        {
+          maxRetries: 2,
+          onRetry: (attempt) => {
+            console.log(`Retrying contact form submission (attempt ${attempt})...`);
+          }
+        }
+      );
 
       toast({
         title: "Message Sent Successfully",
         description: "Thank you for contacting us! We'll get back to you within 24 hours.",
       });
 
-      // Reset form
       contactForm.reset();
-    } catch (error: any) {
-      console.error("Error sending contact form:", error);
-      toast({
-        title: "Error Sending Message",
-        description: "There was an error sending your message. Please try again.",
-        variant: "destructive",
-      });
+    } catch (error) {
+      handleSupabaseError(error, "contact form submission");
     } finally {
       setIsSubmitting(false);
     }
@@ -76,15 +80,25 @@ const Contact = () => {
 
   const handleMpesaPayment = async (data: PaymentFormData) => {
     try {
-      const { data: response, error } = await supabase.functions.invoke('mpesa-payment', {
-        body: {
-          amount: data.amount,
-          phoneNumber: data.phone,
-          description: "AfyaAlert Service Payment"
+      const response = await withRetry(
+        async () => {
+          const { data: response, error } = await supabase.functions.invoke('mpesa-payment', {
+            body: {
+              amount: data.amount,
+              phoneNumber: data.phone,
+              description: "AfyaAlert Service Payment"
+            }
+          });
+          if (error) throw error;
+          return response;
+        },
+        {
+          maxRetries: 2,
+          onRetry: (attempt) => {
+            console.log(`Retrying M-Pesa payment (attempt ${attempt})...`);
+          }
         }
-      });
-
-      if (error) throw error;
+      );
 
       toast({
         title: "Payment Request Sent",
@@ -92,30 +106,35 @@ const Contact = () => {
       });
 
       mpesaForm.reset();
-    } catch (error: any) {
-      console.error("Error processing M-Pesa payment:", error);
-      toast({
-        title: "Payment Error",
-        description: "There was an error processing your payment. Please try again.",
-        variant: "destructive",
-      });
+    } catch (error) {
+      handleSupabaseError(error, "M-Pesa payment");
     }
   };
 
   const handleCardPayment = async (data: PaymentFormData) => {
     try {
-      const { data: response, error } = await supabase.functions.invoke('paystack-payment', {
-        body: {
-          email: data.email,
-          amount: Math.round(data.amount * 100),
-          metadata: {
-            description: "AfyaAlert Service Payment",
-            payment_method: "card"
+      const response = await withRetry(
+        async () => {
+          const { data: response, error } = await supabase.functions.invoke('paystack-payment', {
+            body: {
+              email: data.email,
+              amount: Math.round(data.amount * 100),
+              metadata: {
+                description: "AfyaAlert Service Payment",
+                payment_method: "card"
+              }
+            }
+          });
+          if (error) throw error;
+          return response;
+        },
+        {
+          maxRetries: 2,
+          onRetry: (attempt) => {
+            console.log(`Retrying Paystack payment (attempt ${attempt})...`);
           }
         }
-      });
-
-      if (error) throw error;
+      );
 
       if (response?.authorization_url) {
         window.open(response.authorization_url, '_blank');
@@ -127,13 +146,8 @@ const Contact = () => {
       } else {
         throw new Error("Failed to create payment session");
       }
-    } catch (error: any) {
-      console.error("Error processing card payment:", error);
-      toast({
-        title: "Payment Error",
-        description: error.message || "There was an error processing your payment.",
-        variant: "destructive",
-      });
+    } catch (error) {
+      handleSupabaseError(error, "card payment");
     }
   };
 

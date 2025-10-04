@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { withRetry, handleSupabaseError } from "@/lib/networkUtils";
 import mockData from "@/data/mockData.json";
 import MedicinesModal from "@/components/MedicinesModal";
 import PaymentModal from "@/components/PaymentModal";
@@ -51,16 +52,18 @@ const Pharmacies = () => {
     e.preventDefault();
     
     try {
-      // Send notification email
-      const { error } = await supabase.functions.invoke('send-contact-email', {
-        body: {
-          name: formData.pharmacyName,
-          email: formData.email,
-          phone: formData.phone,
-          subject: "Pharmacy Partnership Application",
-          category: "pharmacy",
-          message: `Pharmacy Partnership Application:
-          
+      // Send notification email with retry logic
+      await withRetry(
+        async () => {
+          const { error } = await supabase.functions.invoke('send-contact-email', {
+            body: {
+              name: formData.pharmacyName,
+              email: formData.email,
+              phone: formData.phone,
+              subject: "Pharmacy Partnership Application",
+              category: "pharmacy",
+              message: `Pharmacy Partnership Application:
+              
 Pharmacy Name: ${formData.pharmacyName}
 License Number: ${formData.licenseNumber}
 Email: ${formData.email}
@@ -70,12 +73,18 @@ County: ${formData.county}
 
 Additional Information:
 ${formData.message || 'None provided'}`
-        }
-      });
+            }
+          });
 
-      if (error) {
-        console.error('Email error:', error);
-      }
+          if (error) throw error;
+        },
+        {
+          maxRetries: 2,
+          onRetry: (attempt) => {
+            console.log(`Retrying email submission (attempt ${attempt})...`);
+          }
+        }
+      );
 
       toast({
         title: "Application Submitted",
@@ -93,11 +102,7 @@ ${formData.message || 'None provided'}`
         message: "",
       });
     } catch (error) {
-      console.error('Submission error:', error);
-      toast({
-        title: "Application Submitted",
-        description: "Thank you for your interest! We'll review your application and get back to you within 2 business days.",
-      });
+      handleSupabaseError(error, "pharmacy application submission");
     }
   };
 

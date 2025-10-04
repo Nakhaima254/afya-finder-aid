@@ -16,6 +16,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { searchSchema, type SearchFormData } from "@/lib/validations";
 import { supabase } from "@/integrations/supabase/client";
+import { withRetry, handleSupabaseError } from "@/lib/networkUtils";
+import { LoadingFallback, LoadingSkeleton } from "@/components/LoadingFallback";
+import { ErrorFallback } from "@/components/ErrorFallback";
 
 interface Medicine {
   id: string;
@@ -40,6 +43,8 @@ const Search = () => {
   const [allMedicines, setAllMedicines] = useState<Medicine[]>([]);
   const [autocompleteOpen, setAutocompleteOpen] = useState(false);
   const [locations, setLocations] = useState<string[]>([]);
+  const [loadError, setLoadError] = useState<Error | null>(null);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   // Search form with validation
   const searchForm = useForm<SearchFormData>({
@@ -50,53 +55,66 @@ const Search = () => {
   });
 
   useEffect(() => {
-    // Load medicines from Supabase
+    // Load medicines from Supabase with retry logic
     const fetchMedicines = async () => {
-      const { data, error } = await supabase
-        .from('medicines')
-        .select(`
-          id,
-          name,
-          strength,
-          price,
-          availability,
-          pharmacy_id,
-          pharmacies (
-            name,
-            location
-          )
-        `)
-        .eq('availability', true);
+      setInitialLoading(true);
+      setLoadError(null);
 
-      if (error) {
+      try {
+        await withRetry(
+          async () => {
+            const { data, error } = await supabase
+              .from('medicines')
+              .select(`
+                id,
+                name,
+                strength,
+                price,
+                availability,
+                pharmacy_id,
+                pharmacies (
+                  name,
+                  location
+                )
+              `)
+              .eq('availability', true);
+
+            if (error) throw error;
+
+            const formattedMedicines = data.map(med => ({
+              id: med.id,
+              name: med.name,
+              strength: med.strength,
+              price: Number(med.price),
+              pharmacy_id: med.pharmacy_id,
+              availability: med.availability,
+              pharmacies: med.pharmacies as any
+            }));
+
+            setMedicines(formattedMedicines);
+            setAllMedicines(formattedMedicines);
+            setFilteredMedicines(formattedMedicines);
+
+            // Extract unique locations
+            const uniqueLocations = [...new Set(formattedMedicines
+              .map(m => m.pharmacies?.location)
+              .filter(Boolean))] as string[];
+            setLocations(uniqueLocations);
+          },
+          {
+            maxRetries: 3,
+            onRetry: (attempt) => {
+              console.log(`Retrying medicine fetch (attempt ${attempt})...`);
+            }
+          }
+        );
+      } catch (error) {
         console.error('Error fetching medicines:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load medicines. Please try again.",
-          variant: "destructive",
-        });
-        return;
+        setLoadError(error as Error);
+        handleSupabaseError(error, "medicine search");
+      } finally {
+        setInitialLoading(false);
       }
-
-      const formattedMedicines = data.map(med => ({
-        id: med.id,
-        name: med.name,
-        strength: med.strength,
-        price: Number(med.price),
-        pharmacy_id: med.pharmacy_id,
-        availability: med.availability,
-        pharmacies: med.pharmacies as any
-      }));
-
-      setMedicines(formattedMedicines);
-      setAllMedicines(formattedMedicines);
-      setFilteredMedicines(formattedMedicines);
-
-      // Extract unique locations
-      const uniqueLocations = [...new Set(formattedMedicines
-        .map(m => m.pharmacies?.location)
-        .filter(Boolean))] as string[];
-      setLocations(uniqueLocations);
     };
 
     fetchMedicines();
@@ -179,35 +197,34 @@ const Search = () => {
         return;
       }
 
-      // Create reservation in database
-      const { error } = await supabase
-        .from('reservations')
-        .insert({
-          user_id: user.id,
-          medicine_id: medicine.id,
-          pharmacy_id: medicine.pharmacy_id,
-          status: 'pending'
-        });
+      // Create reservation in database with retry logic
+      await withRetry(
+        async () => {
+          const { error } = await supabase
+            .from('reservations')
+            .insert({
+              user_id: user.id,
+              medicine_id: medicine.id,
+              pharmacy_id: medicine.pharmacy_id,
+              status: 'pending'
+            });
 
-      if (error) {
-        toast({
-          title: "Reservation Failed",
-          description: "Unable to reserve medicine. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
+          if (error) throw error;
+        },
+        {
+          maxRetries: 2,
+          onRetry: (attempt) => {
+            console.log(`Retrying reservation (attempt ${attempt})...`);
+          }
+        }
+      );
 
       toast({
         title: "Reservation Confirmed",
         description: `${medicine.name} has been reserved at ${medicine.pharmacies?.name}. Please collect within 24 hours.`,
       });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "An error occurred. Please try again.",
-        variant: "destructive",
-      });
+      handleSupabaseError(error, "medicine reservation");
     }
   };
 
@@ -238,6 +255,50 @@ const Search = () => {
       .filter(name => name.toLowerCase().includes(query.toLowerCase()))
       .slice(0, 8);
   };
+
+  // Show loading state on initial load
+  if (initialLoading) {
+    return (
+      <div className="min-h-screen bg-muted/30">
+        <div className="container mx-auto px-4 py-8">
+          <div className="space-y-6">
+            <div className="text-center space-y-4">
+              <h1 className="text-3xl font-bold lg:text-4xl">Search Medicines</h1>
+              <p className="text-xl text-muted-foreground">
+                Find the best prices and availability across Kenya
+              </p>
+            </div>
+            <LoadingSkeleton count={6} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if initial load failed
+  if (loadError) {
+    return (
+      <div className="min-h-screen bg-muted/30">
+        <div className="container mx-auto px-4 py-8">
+          <div className="space-y-6">
+            <div className="text-center space-y-4">
+              <h1 className="text-3xl font-bold lg:text-4xl">Search Medicines</h1>
+              <p className="text-xl text-muted-foreground">
+                Find the best prices and availability across Kenya
+              </p>
+            </div>
+            <ErrorFallback
+              error={loadError}
+              resetError={() => window.location.reload()}
+              title="Unable to Load Medicines"
+              description="We couldn't load the medicine database. Please check your connection and try again."
+              actionLabel="Reload Page"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-muted/30">
