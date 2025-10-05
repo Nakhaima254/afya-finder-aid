@@ -131,7 +131,7 @@ const Footer = () => {
 
         <div className="mt-8 border-t pt-8 text-center">
           <p className="text-sm text-muted-foreground">
-            © 2024 AfyaAlert. All rights reserved. Licensed by the Pharmacy and Poisons Board, Kenya.
+            © 2025 AfyaAlert. All rights reserved. Licensed by the Pharmacy and Poisons Board, Kenya.
           </p>
         </div>
       </div>

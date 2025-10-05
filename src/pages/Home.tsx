@@ -213,7 +213,7 @@ const Home = () => {
                   Start Searching
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="xl" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary">
+              <Button asChild variant="default" size="xl" className="bg-primary-foreground text-primary hover:bg-foreground hover:text-background">
                 <Link to="/about">Learn More</Link>
               </Button>
             </div>
