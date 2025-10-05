@@ -137,8 +137,8 @@ ${formData.message || 'None provided'}`
   };
 
   const stats = [
-    { label: "Total Pharmacies", value: "500+", icon: Building2 },
-    { label: "Verified Partners", value: "450+", icon: ShieldCheck },
+    { label: "Partner Pharmacies", value: pharmacies.length.toString(), icon: Building2 },
+    { label: "Verified Partners", value: pharmacies.filter(p => p.status === "Verified").length.toString(), icon: ShieldCheck },
     { label: "Counties Covered", value: "47", icon: MapPin },
     { label: "Average Rating", value: "4.8/5", icon: Shield },
   ];
