@@ -29,6 +29,7 @@ const Footer = () => {
               <li>
                 <Link
                   to="/search"
+                  onClick={() => window.scrollTo(0, 0)}
                   className="text-muted-foreground hover:text-primary transition-colors"
                 >
                   Search Medicines
@@ -37,6 +38,7 @@ const Footer = () => {
               <li>
                 <Link
                   to="/pharmacies"
+                  onClick={() => window.scrollTo(0, 0)}
                   className="text-muted-foreground hover:text-primary transition-colors"
                 >
                   Partner Pharmacies
@@ -45,6 +47,7 @@ const Footer = () => {
               <li>
                 <Link
                   to="/about"
+                  onClick={() => window.scrollTo(0, 0)}
                   className="text-muted-foreground hover:text-primary transition-colors"
                 >
                   About Us
@@ -53,6 +56,7 @@ const Footer = () => {
               <li>
                 <Link
                   to="/contact"
+                  onClick={() => window.scrollTo(0, 0)}
                   className="text-muted-foreground hover:text-primary transition-colors"
                 >
                   Contact
